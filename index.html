@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dosis Towers Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+  <!-- Navbar -->
+  <nav class="bg-gray-800 p-4 shadow border-b border-gray-600">
+    <div class="container mx-auto flex items-center">
+      <div class="flex-1"></div>
+      <h1 class="text-2xl font-bold text-[#1e73be] flex-1 text-center">Dosis Towers</h1>
+      <div class="flex-1 flex justify-end">
+        <input
+          id="tower-search"
+          type="text"
+          placeholder="Search Tower (e.g., D1)"
+          class="bg-gray-700 text-white border border-gray-600 rounded py-2 px-4 focus:outline-none focus:ring-2 focus:ring-[#1e73be] w-64"
+        />
+      </div>
+    </div>
+  </nav>
+
+  <div class="flex flex-1">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-gray-700 p-4 border-r border-gray-600">
+      <ul class="space-y-2">
+        <li><a href="#" class="block p-2 hover:bg-gray-600 rounded">Dashboard</a></li>
+        <li><a href="#" class="block p-2 hover:bg-gray-600 rounded">Towers</a></li>
+        <li><a href="#" id="settings-link" class="block p-2 hover:bg-gray-600 rounded">Settings</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6">
+      <div class="container mx-auto">
+        <h2 class="text-xl font-semibold mb-4">Towers</h2>
+        <!-- Towers Grid -->
+        <div id="towers-grid" class="grid grid-cols-6 gap-4"></div>
+        <!-- Pagination -->
+        <div id="pagination" class="mt-6 flex justify-center space-x-2 flex-wrap"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal for Tower Details -->
+  <div id="tower-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-gray-700 p-8 rounded-lg w-96">
+      <h3 id="modal-title" class="text-xl font-bold mb-6"></h3>
+      <dl class="space-y-4">
+        <div>
+          <dt class="font-semibold text-gray-300">Active</dt>
+          <dd id="modal-active" class="text-gray-100"></dd>
+        </div>
+        <div>
+          <dt class="font-semibold text-gray-300">LSU Plate Shift</dt>
+          <dd id="modal-lsu-plate-shift" class="text-gray-100"></dd>
+        </div>
+        <div>
+          <dt class="font-semibold text-gray-300">LSU Series</dt>
+          <dd id="modal-lsu-series" class="text-gray-100"></dd>
+        </div>
+        <div>
+          <dt class="font-semibold text-gray-300">LOR</dt>
+          <dd id="modal-lor" class="text-gray-100"></dd>
+        </div>
+        <div>
+          <dt class="font-semibold text-gray-300">Y2B Harness</dt>
+          <dd id="modal-y2b-harness" class="text-gray-100"></dd>
+        </div>
+        <div>
+          <dt class="font-semibold text-gray-300">Z-Axis</dt>
+          <dd id="modal-z-axis" class="text-gray-100"></dd>
+        </div>
+        <div>
+          <dt class="font-semibold text-gray-300">EOAT</dt>
+          <dd id="modal-eoat" class="text-gray-100"></dd>
+        </div>
+        <div>
+          <dt class="font-semibold text-gray-300">MCOM Printer</dt>
+          <dd id="modal-mcom-printer" class="text-gray-100"></dd>
+        </div>
+      </dl>
+      <button id="close-tower-modal" class="mt-8 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 w-full">Close</button>
+    </div>
+  </div>
+
+  <!-- Modal for Settings -->
+  <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-gray-700 p-8 rounded-lg w-96">
+      <h3 class="text-xl font-bold mb-6">Settings</h3>
+      <div class="flex items-center justify-between mb-6">
+        <label for="show-non-active" class="text-gray-100">Show Non-Active Towers</label>
+        <input
+          type="checkbox"
+          id="show-non-active"
+          class="w-5 h-5 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500 cursor-pointer"
+        />
+      </div>
+      <button id="close-settings-modal" class="mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 w-full">Close</button>
+    </div>
+  </div>
+
+  <script>
+    const towersPerPage = 30;
+    let currentPage = 1;
+    let allTowers = [];
+    let showNonActiveTowers = false;
+
+    async function loadTowers() {
+      try {
+        const response = await fetch('./towers.json');
+        if (!response.ok) throw new Error(`Failed to load towers.json: ${response.status}`);
+        allTowers = await response.json();
+        if (!Array.isArray(allTowers) || allTowers.length === 0) {
+          throw new Error('towers.json is empty or invalid');
+        }
+        displayTowers();
+        setupPagination();
+      } catch (error) {
+        console.error('Error loading towers:', error);
+        document.getElementById('towers-grid').innerHTML = '<p class="text-red-400">Error loading towers.json. Ensure the file exists in the correct directory.</p>';
+      }
+    }
+
+    function getFilteredTowers() {
+      return showNonActiveTowers ? allTowers : allTowers.filter(tower => tower.Active);
+    }
+
+    function displayTowers() {
+      const grid = document.getElementById('towers-grid');
+      grid.innerHTML = '';
+      const filteredTowers = getFilteredTowers();
+      const start = (currentPage - 1) * towersPerPage;
+      const end = start + towersPerPage;
+      const paginatedTowers = filteredTowers.slice(start, end);
+
+      if (paginatedTowers.length === 0) {
+        grid.innerHTML = '<p class="text-gray-400 col-span-6 text-center">No towers to display.</p>';
+        return;
+      }
+
+      paginatedTowers.forEach(tower => {
+        const towerCard = document.createElement('div');
+        towerCard.className = 'bg-gray-700 p-4 rounded shadow cursor-pointer hover:bg-gray-600 flex flex-col items-center';
+        towerCard.innerHTML = `
+          <h3 class="font-semibold mb-2">${tower.name}</h3>
+          <svg class="w-10 h-10 text-[#1e73be]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+          </svg>
+          <p class="text-sm mt-2 ${tower.Active ? 'text-green-400' : 'text-red-400'}">Active: ${tower.Active ? 'Yes' : 'No'}</p>
+        `;
+        towerCard.onclick = () => showTowerDetails(tower);
+        grid.appendChild(towerCard);
+      });
+    }
+
+    function showTowerDetails(tower) {
+      document.getElementById('modal-title').textContent = `Tower ${tower.name}`;
+      document.getElementById('modal-active').textContent = tower.Active ? 'Yes' : 'No';
+      document.getElementById('modal-lsu-plate-shift').textContent = tower.LSU_plate_shift;
+      document.getElementById('modal-lsu-series').textContent = tower.LSU_Series;
+      document.getElementById('modal-lor').textContent = tower.LOR;
+      document.getElementById('modal-y2b-harness').textContent = tower.Y2B_Harness;
+      document.getElementById('modal-z-axis').textContent = tower.Z_Axis;
+      document.getElementById('modal-eoat').textContent = tower.EOAT;
+      document.getElementById('modal-mcom-printer').textContent = tower.MCOM_Printer;
+      document.getElementById('tower-modal').classList.remove('hidden');
+    }
+
+    function showSettingsModal() {
+      document.getElementById('show-non-active').checked = showNonActiveTowers;
+      document.getElementById('settings-modal').classList.remove('hidden');
+    }
+
+    document.getElementById('close-tower-modal').onclick = () => {
+      document.getElementById('tower-modal').classList.add('hidden');
+    };
+
+    document.getElementById('close-settings-modal').onclick = () => {
+      document.getElementById('settings-modal').classList.add('hidden');
+    };
+
+    document.getElementById('settings-link').onclick = (e) => {
+      e.preventDefault();
+      showSettingsModal();
+    };
+
+    document.getElementById('show-non-active').onchange = (e) => {
+      showNonActiveTowers = e.target.checked;
+      currentPage = 1; // Reset to page 1 when filter changes
+      displayTowers();
+      setupPagination();
+    };
+
+    function setupPagination() {
+      const filteredTowers = getFilteredTowers();
+      const totalPages = Math.ceil(filteredTowers.length / towersPerPage);
+      const pagination = document.getElementById('pagination');
+      pagination.innerHTML = '';
+
+      const prevButton = document.createElement('button');
+      prevButton.className = `px-4 py-2 bg-gray-700 rounded ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`;
+      prevButton.textContent = 'Previous';
+      prevButton.disabled = currentPage === 1;
+      prevButton.onclick = () => {
+        if (currentPage > 1) {
+          currentPage--;
+          displayTowers();
+          setupPagination();
+        }
+      };
+      pagination.appendChild(prevButton);
+
+      const maxButtons = 5;
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+      if (endPage - startPage + 1 < maxButtons) {
+        startPage = Math.max(1, endPage - maxButtons + 1);
+      }
+
+      if (startPage > 1) {
+        const firstPageButton = document.createElement('button');
+        firstPageButton.className = 'px-4 py-2 bg-gray-700 rounded hover:bg-gray-600';
+        firstPageButton.textContent = '1';
+        firstPageButton.onclick = () => {
+          currentPage = 1;
+          displayTowers();
+          setupPagination();
+        };
+        pagination.appendChild(firstPageButton);
+
+        if (startPage > 2) {
+          const ellipsis = document.createElement('span');
+          ellipsis.className = 'px-4 py-2 text-gray-400';
+          ellipsis.textContent = '...';
+          pagination.appendChild(ellipsis);
+        }
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.className = `px-4 py-2 ${i === currentPage ? 'bg-[#1e73be]' : 'bg-gray-700'} rounded hover:bg-gray-600`;
+        pageButton.textContent = i;
+        pageButton.onclick = () => {
+          currentPage = i;
+          displayTowers();
+          setupPagination();
+        };
+        pagination.appendChild(pageButton);
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          const ellipsis = document.createElement('span');
+          ellipsis.className = 'px-4 py-2 text-gray-400';
+          ellipsis.textContent = '...';
+          pagination.appendChild(ellipsis);
+        }
+
+        const lastPageButton = document.createElement('button');
+        lastPageButton.className = 'px-4 py-2 bg-gray-700 rounded hover:bg-gray-600';
+        lastPageButton.textContent = totalPages;
+        lastPageButton.onclick = () => {
+          currentPage = totalPages;
+          displayTowers();
+          setupPagination();
+        };
+        pagination.appendChild(lastPageButton);
+      }
+
+      const nextButton = document.createElement('button');
+      nextButton.className = `px-4 py-2 bg-gray-700 rounded ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`;
+      nextButton.textContent = 'Next';
+      nextButton.disabled = currentPage === totalPages;
+      nextButton.onclick = () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          displayTowers();
+          setupPagination();
+        }
+      };
+      pagination.appendChild(nextButton);
+    }
+
+    document.getElementById('tower-search').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const searchTerm = e.target.value.trim().toUpperCase();
+        if (searchTerm) {
+          const tower = allTowers.find(t => t.name === searchTerm);
+          if (tower) {
+            showTowerDetails(tower);
+            e.target.value = '';
+          }
+        }
+      }
+    });
+
+    loadTowers();
+  </script>
+</body>
+</html>
