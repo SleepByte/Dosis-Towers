@@ -91,15 +91,40 @@
   <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
     <div class="bg-gray-700 p-8 rounded-lg w-96">
       <h3 class="text-xl font-bold mb-6">Settings</h3>
-      <div class="flex items-center justify-between mb-6">
-        <label for="show-non-active" class="text-gray-100">Show Non-Active Towers</label>
-        <input
-          type="checkbox"
-          id="show-non-active"
-          class="w-5 h-5 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500 cursor-pointer"
-        />
+      <div class="space-y-6">
+        <div class="flex items-center justify-between">
+          <label for="show-non-active" class="text-gray-100">Show Non-Active Towers</label>
+          <input
+            type="checkbox"
+            id="show-non-active"
+            class="w-5 h-5 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500 cursor-pointer"
+          />
+        </div>
+        <div class="flex flex-col">
+          <label for="filter-lsu-series" class="text-gray-100 mb-2">LSU Series</label>
+          <select
+            id="filter-lsu-series"
+            class="bg-gray-800 text-white border border-gray-600 rounded py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="All">All</option>
+            <option value="Series_1">Series_1</option>
+            <option value="Series_2">Series_2</option>
+            <option value="Series_3">Series_3</option>
+          </select>
+        </div>
+        <div class="flex flex-col">
+          <label for="filter-lor" class="text-gray-100 mb-2">LOR</label>
+          <select
+            id="filter-lor"
+            class="bg-gray-800 text-white border border-gray-600 rounded py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="All">All</option>
+            <option value="LOR_351">LOR_351</option>
+            <option value="LOR_514">LOR_514</option>
+          </select>
+        </div>
       </div>
-      <button id="close-settings-modal" class="mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 w-full">Close</button>
+      <button id="close-settings-modal" class="mt-8 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 w-full">Close</button>
     </div>
   </div>
 
@@ -108,6 +133,8 @@
     let currentPage = 1;
     let allTowers = [];
     let showNonActiveTowers = false;
+    let filterLSUSeries = 'All';
+    let filterLOR = 'All';
 
     async function loadTowers() {
       try {
@@ -126,7 +153,12 @@
     }
 
     function getFilteredTowers() {
-      return showNonActiveTowers ? allTowers : allTowers.filter(tower => tower.Active);
+      return allTowers.filter(tower => {
+        const activePass = showNonActiveTowers || tower.Active;
+        const seriesPass = filterLSUSeries === 'All' || tower.LSU_Series === filterLSUSeries;
+        const lorPass = filterLOR === 'All' || tower.LOR === filterLOR;
+        return activePass && seriesPass && lorPass;
+      });
     }
 
     function displayTowers() {
@@ -172,6 +204,8 @@
 
     function showSettingsModal() {
       document.getElementById('show-non-active').checked = showNonActiveTowers;
+      document.getElementById('filter-lsu-series').value = filterLSUSeries;
+      document.getElementById('filter-lor').value = filterLOR;
       document.getElementById('settings-modal').classList.remove('hidden');
     }
 
@@ -190,7 +224,21 @@
 
     document.getElementById('show-non-active').onchange = (e) => {
       showNonActiveTowers = e.target.checked;
-      currentPage = 1; // Reset to page 1 when filter changes
+      currentPage = 1;
+      displayTowers();
+      setupPagination();
+    };
+
+    document.getElementById('filter-lsu-series').onchange = (e) => {
+      filterLSUSeries = e.target.value;
+      currentPage = 1;
+      displayTowers();
+      setupPagination();
+    };
+
+    document.getElementById('filter-lor').onchange = (e) => {
+      filterLOR = e.target.value;
+      currentPage = 1;
       displayTowers();
       setupPagination();
     };
