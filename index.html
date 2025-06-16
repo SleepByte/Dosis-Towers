@@ -135,9 +135,15 @@
     const towersPerPage = 30;
     let currentPage = 1;
     let allTowers = [];
-    let showNonActiveTowers = false;
-    let filterLSUSeries = 'All';
-    let filterLOR = 'All';
+    let showNonActiveTowers = localStorage.getItem('showNonActiveTowers') === 'true';
+    let filterLSUSeries = localStorage.getItem('filterLSUSeries') || 'All';
+    let filterLOR = localStorage.getItem('filterLOR') || 'All';
+
+    // Validate filter values
+    const validLSUSeries = ['All', 'Series_1', 'Series_2', 'Series_3'];
+    const validLOR = ['All', 'LOR_351', 'LOR_514'];
+    if (!validLSUSeries.includes(filterLSUSeries)) filterLSUSeries = 'All';
+    if (!validLOR.includes(filterLOR)) filterLOR = 'All';
 
     async function loadTowers() {
       try {
@@ -229,6 +235,7 @@
 
     document.getElementById('show-non-active').onchange = (e) => {
       showNonActiveTowers = e.target.checked;
+      localStorage.setItem('showNonActiveTowers', showNonActiveTowers);
       currentPage = 1;
       displayTowers();
       setupPagination();
@@ -236,6 +243,7 @@
 
     document.getElementById('filter-lsu-series').onchange = (e) => {
       filterLSUSeries = e.target.value;
+      localStorage.setItem('filterLSUSeries', filterLSUSeries);
       currentPage = 1;
       displayTowers();
       setupPagination();
@@ -243,6 +251,7 @@
 
     document.getElementById('filter-lor').onchange = (e) => {
       filterLOR = e.target.value;
+      localStorage.setItem('filterLOR', filterLOR);
       currentPage = 1;
       displayTowers();
       setupPagination();
