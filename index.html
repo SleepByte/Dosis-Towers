@@ -36,7 +36,10 @@
     <!-- Main Content -->
     <main class="flex-1 p-6">
       <div class="container mx-auto">
-        <h2 class="text-xl font-semibold mb-4">Towers</h2>
+        <div class="flex items-center mb-4">
+          <h2 class="text-xl font-semibold">Towers</h2>
+          <span id="tower-count" class="ml-auto text-sm text-gray-400"></span>
+        </div>
         <!-- Towers Grid -->
         <div id="towers-grid" class="grid grid-cols-6 gap-4"></div>
         <!-- Pagination -->
@@ -163,8 +166,10 @@
 
     function displayTowers() {
       const grid = document.getElementById('towers-grid');
+      const towerCount = document.getElementById('tower-count');
       grid.innerHTML = '';
       const filteredTowers = getFilteredTowers();
+      towerCount.textContent = `Showing ${filteredTowers.length} towers`;
       const start = (currentPage - 1) * towersPerPage;
       const end = start + towersPerPage;
       const paginatedTowers = filteredTowers.slice(start, end);
