@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dosis Towers Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body class="bg-gray-900 text-white min-h-screen flex flex-col">
   <!-- Navbar -->
@@ -39,6 +41,9 @@
         <div class="flex items-center mb-4">
           <h2 class="text-xl font-semibold">Towers</h2>
           <span id="tower-count" class="ml-auto text-sm text-gray-400"></span>
+          <button id="export-excel" title="Export to Excel" class="ml-2 text-gray-400 hover:text-gray-200">
+            <i class="fa-solid fa-file-excel text-lg"></i>
+          </button>
         </div>
         <!-- Towers Grid -->
         <div id="towers-grid" class="grid grid-cols-6 gap-4"></div>
@@ -127,7 +132,7 @@
           </select>
         </div>
       </div>
-      <button id="close-settings-modal" class="mt-8 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 w-full">Close</button>
+      <button id="close-settings-modal" class="mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 w-full">Close</button>
     </div>
   </div>
 
@@ -255,6 +260,36 @@
       currentPage = 1;
       displayTowers();
       setupPagination();
+    };
+
+    document.getElementById('export-excel').onclick = () => {
+      try {
+        console.log('Exporting to Excel...');
+        const filteredTowers = getFilteredTowers();
+        console.log('Filtered towers count:', filteredTowers.length);
+        if (!window.XLSX) {
+          throw new Error('SheetJS library not loaded. Please check your network connection or try refreshing the page.');
+        }
+        const data = filteredTowers.map(tower => ({
+          Name: tower.name,
+          Active: tower.Active ? 'Yes' : 'No',
+          'LSU Plate Shift': tower.LSU_plate_shift,
+          'LSU Series': tower.LSU_Series,
+          LOR: tower.LOR,
+          'Y2B Harness': tower.Y2B_Harness,
+          'Z-Axis': tower.Z_Axis,
+          EOAT: tower.EOAT,
+          'MCOM Printer': tower.MCOM_Printer
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Towers');
+        XLSX.writeFile(workbook, 'towers.xlsx');
+        console.log('Export successful');
+      } catch (error) {
+        console.error('Export failed:', error);
+        alert(`Failed to export to Excel: ${error.message}`);
+      }
     };
 
     function setupPagination() {
